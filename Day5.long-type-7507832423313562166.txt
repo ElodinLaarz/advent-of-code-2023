@@ -1,1 +1,0 @@
-FilterMap<Map<std::slice::Iter<'_, &str>, {closure@Day5.rs:45:22: 45:25}>, fn(Result<usize, ParseIntError>) -> Option<usize> {Result::<usize, ParseIntError>::ok}>
