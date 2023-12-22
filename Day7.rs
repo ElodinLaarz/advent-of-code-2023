@@ -5,8 +5,7 @@ use std::io::prelude::*;
 use std::io::{Error, ErrorKind};
 
 // Surely we'll have suits at some point...
-type Card = (String, String);
-type Hand = (Vec<Card>, u32);
+type Hand = (Vec<String>, u32);
 
 #[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 enum Rank {
@@ -72,7 +71,7 @@ fn signature_to_hand_type(sig: Vec<usize>) -> HandType {
 fn score_poker_hand(h: &Hand) -> HandType {
     let mut rank_counts: HashMap<Rank, usize> = HashMap::new();
     for card in h.0.iter() {
-        let rank = value_to_rank(&card.0);
+        let rank = value_to_rank(card);
         let mut count = rank_counts.entry(rank).or_insert(0);
         *count += 1;
     }
@@ -93,8 +92,8 @@ fn compare_hands(h1: &Hand, h2: &Hand) -> std::cmp::Ordering {
         return std::cmp::Ordering::Greater;
     } 
     for (c1, c2) in h1.0.iter().zip(h2.0.iter()) {
-        let c1_rank = value_to_rank(&c1.0);
-        let c2_rank = value_to_rank(&c2.0);
+        let c1_rank = value_to_rank(&c1);
+        let c2_rank = value_to_rank(&c2);
         if c1_rank < c2_rank {
             return std::cmp::Ordering::Less;
         }
@@ -106,18 +105,15 @@ fn compare_hands(h1: &Hand, h2: &Hand) -> std::cmp::Ordering {
 }
 
 fn parse_hand(s: &str) -> Hand {
-    const DEFAULT_SUIT: &str = "S";
     let mut hand: Hand = (Vec::new(), 0);
     // Hands look like 32T3K 765. The first five characters are the cards in
-    // the hand (no suits just yet), and space delimited value is the bet
-    // amount.
+    // the hand, and space delimited value is the bet amount.
     let mut cards_and_bet = s.split(" ");
     let cards = cards_and_bet.next().unwrap();
     let bet = cards_and_bet.next().unwrap().parse::<u32>().unwrap();
     for card in cards.chars() {
         let value = card.to_string();
-        let suit = DEFAULT_SUIT.to_string();
-        hand.0.push((value, suit));
+        hand.0.push(value);
     }
     hand.1 = bet;
     return hand;
