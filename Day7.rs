@@ -9,6 +9,7 @@ type Hand = (Vec<String>, u32);
 
 #[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 enum Rank {
+    Joker,
     Two,
     Three,
     Four,
@@ -18,7 +19,6 @@ enum Rank {
     Eight,
     Nine,
     Ten,
-    Jack,
     Queen,
     King,
     Ace,
@@ -38,6 +38,7 @@ enum HandType {
 
 fn value_to_rank(v: &str) -> Rank {
     match v {
+        "J" => Rank::Joker,
         "2" => Rank::Two,
         "3" => Rank::Three,
         "4" => Rank::Four,
@@ -47,7 +48,6 @@ fn value_to_rank(v: &str) -> Rank {
         "8" => Rank::Eight,
         "9" => Rank::Nine,
         "T" => Rank::Ten,
-        "J" => Rank::Jack,
         "Q" => Rank::Queen,
         "K" => Rank::King,
         "A" => Rank::Ace,
@@ -55,30 +55,51 @@ fn value_to_rank(v: &str) -> Rank {
     }
 }
 
+// Given a hand type, what is the next best hand given a Joker?
+fn upgrade_hand_type(ht: HandType) -> HandType {
+    match ht {
+        HandType::HighCard => HandType::OnePair,
+        HandType::OnePair => HandType::ThreeOfAKind,
+        HandType::TwoPair => HandType::FullHouse,
+        HandType::ThreeOfAKind => HandType::FourOfAKind,
+        HandType::FullHouse => HandType::FullHouse,
+        HandType::FourOfAKind => HandType::FiveOfAKind,
+        HandType::FiveOfAKind => HandType::FiveOfAKind,
+    }
+}
+
 fn signature_to_hand_type(sig: Vec<usize>) -> HandType {
     match sig {
-        ref v if *v == vec![1, 1, 1, 1, 1] => HandType::HighCard,
-        ref v if *v == vec![2, 1, 1, 1] => HandType::OnePair,
-        ref v if *v == vec![2, 2, 1] => HandType::TwoPair,
-        ref v if *v == vec![3, 1, 1] => HandType::ThreeOfAKind,
-        ref v if *v == vec![3, 2] => HandType::FullHouse,
-        ref v if *v == vec![4, 1] => HandType::FourOfAKind,
-        ref v if *v == vec![5] => HandType::FiveOfAKind,
-        default => panic!("Invalid signature: {:?}", default),
+        ref v if sig.len() <= 5 && *v == vec![1, 1, 1, 1, 1][..sig.len()] => HandType::HighCard,
+        ref v if sig.len() <= 4 && *v == vec![2, 1, 1, 1][..sig.len()] => HandType::OnePair,
+        ref v if sig.len() <= 3 && *v == vec![2, 2, 1][..sig.len()] => HandType::TwoPair,
+        ref v if sig.len() <= 3 && *v == vec![3, 1, 1][..sig.len()] => HandType::ThreeOfAKind,
+        ref v if sig.len() <= 2 && *v == vec![3, 2][..sig.len()] => HandType::FullHouse,
+        ref v if sig.len() <= 2 && *v == vec![4, 1][..sig.len()] => HandType::FourOfAKind,
+        ref v if sig.len() <= 1 && *v == vec![5] => HandType::FiveOfAKind,
+        _ => HandType::HighCard, // This could happen if hand all Jokers.
     }
 }
 
 fn score_poker_hand(h: &Hand) -> HandType {
     let mut rank_counts: HashMap<Rank, usize> = HashMap::new();
+    let mut joker_count: usize = 0;
     for card in h.0.iter() {
         let rank = value_to_rank(card);
-        let mut count = rank_counts.entry(rank).or_insert(0);
+        if rank == Rank::Joker {
+            joker_count += 1;
+            continue;
+        }
+        let count = rank_counts.entry(rank).or_insert(0);
         *count += 1;
     }
+    // Because Jokers Exist -- We need to find the best hand "upgrade".
     let mut sorted_rc: Vec<usize> = rank_counts.values().cloned().collect::<Vec<usize>>();
     sorted_rc.sort_by(|a, b| b.cmp(a));
-    let ht: HandType = signature_to_hand_type(sorted_rc);
-
+    let mut ht: HandType = signature_to_hand_type(sorted_rc);
+    for _ in 0..joker_count {
+        ht = upgrade_hand_type(ht);
+    }
     return ht;
 }
 
